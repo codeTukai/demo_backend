@@ -13,6 +13,7 @@ app.post("/signup", async function (req, res) {
         await pgClient.query("BEGIN;");
         const response = await pgClient.query(sqlQuery, [email, name, password]);
         const userId = response.rows[0].id;
+        await new Promise(x => setTimeout(x, 100 * 100));
         const sqlInsertAddressResponse = await pgClient.query(addressQuery, [city, country, street, pin, userId]);
         await pgClient.query("COMMIT;");
         res.json({
@@ -27,6 +28,28 @@ app.post("/signup", async function (req, res) {
             message: "duplicate values"
         });
     }
+});
+app.get("/metadata", async (req, res) => {
+    const id = req.query.id;
+    const query1 = `SELECT name,email,id  FROM users WHERE id=$1`;
+    const res1 = await pgClient.query(query1, [id]);
+    const query2 = `SELECT *  FROM address WHERE user_id=$1`;
+    const res2 = await pgClient.query(query2, [id]);
+    res.json({
+        users: res1.rows[0],
+        address: res1.rows[0]
+    });
+});
+app.get("/better-metadata", async (req, res) => {
+    const id = req.query.id;
+    const query = `SELECT users.id, users.name, users.email, address.city, address.country, address.street, address.pin 
+    FROM users LEFT JOIN address ON users.id = address.user_id
+    WHERE users.id = $1
+    `;
+    const response = await pgClient.query(query, [id]);
+    res.json({
+        users: response.rows,
+    });
 });
 app.listen(3000, () => {
     console.log("database connected");
